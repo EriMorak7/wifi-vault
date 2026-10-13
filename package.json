@@ -1,0 +1,20 @@
+{
+  "name": "wifi-vault",
+  "version": "1.0.0",
+  "description": "View Wi-Fi passwords saved on this PC",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win portable"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.morakinyo.wifivault",
+    "productName": "WiFi Vault",
+    "files": ["main.js", "preload.js", "index.html"],
+    "win": { "target": "portable" }
+  }
+}
