@@ -1,6 +1,6 @@
 {
   "name": "wifi-vault",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "View Wi-Fi passwords saved on this PC",
   "main": "main.js",
   "scripts": {
@@ -15,6 +15,9 @@
     "appId": "com.morakinyo.wifivault",
     "productName": "WiFi Vault",
     "files": ["main.js", "preload.js", "index.html"],
-    "win": { "target": "portable" }
+    "win": {
+      "target": "portable",
+      "requestedExecutionLevel": "requireAdministrator"
+    }
   }
 }

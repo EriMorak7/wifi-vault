@@ -7,7 +7,7 @@
 <style>
   :root {
     --bg: #0f1117; --card: #181b24; --line: #262a36;
-    --text: #e8eaf0; --muted: #8b90a0; --accent: #4f8cff; --ok: #3ecf8e;
+    --text: #e8eaf0; --muted: #8b90a0; --accent: #4f8cff; --ok: #3ecf8e; --warn: #f5b84b;
   }
   * { box-sizing: border-box; }
   body {
@@ -18,6 +18,10 @@
   header { padding: 22px 24px 12px; }
   h1 { margin: 0; font-size: 22px; }
   .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  #banner {
+    display: none; margin: 0 24px 12px; padding: 10px 14px; border-radius: 10px;
+    background: rgba(245,184,75,.12); border: 1px solid var(--warn); color: var(--warn); font-size: 13px;
+  }
   .toolbar { display: flex; gap: 10px; padding: 0 24px 14px; }
   input {
     flex: 1; background: var(--card); border: 1px solid var(--line);
@@ -39,7 +43,8 @@
   .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
   .pw { font-family: Consolas, monospace; font-size: 14px; margin-top: 8px; word-break: break-all; }
-  .pw.none { color: var(--muted); font-family: inherit; font-style: italic; }
+  .note { margin-top: 8px; font-size: 13px; color: var(--muted); }
+  .note.warn { color: var(--warn); }
   .actions { display: flex; gap: 8px; }
   .empty { color: var(--muted); text-align: center; padding: 40px 0; }
   footer { padding: 10px 24px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); }
@@ -51,6 +56,10 @@
   <h1>WiFi Vault</h1>
   <div class="sub">Wi-Fi networks saved on this PC</div>
 </header>
+<div id="banner">
+  Not running as Administrator, so some passwords may be hidden.
+  Close the app and reopen it with "Run as administrator" (or start it from an Administrator terminal).
+</div>
 <div class="toolbar">
   <input id="search" placeholder="Search networks..." />
   <button id="toggleAll">Show all</button>
@@ -67,6 +76,12 @@
   const $ = (id) => document.getElementById(id);
   const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+  const NOTES = {
+    open: { text: 'Open network: it has no password.', warn: false },
+    enterprise: { text: 'Enterprise network (WPA-Enterprise): it signs in with a username/password or certificate, so there is no shared Wi-Fi password to show.', warn: false },
+    unreadable: { text: 'Could not read this password. Try running as Administrator. On a work or school PC, an administrator policy may also block it.', warn: true },
+  };
+
   function render() {
     const q = $('search').value.trim().toLowerCase();
     const shown = networks.filter((n) => n.name.toLowerCase().includes(q));
@@ -77,16 +92,22 @@
       return;
     }
 
-    $('list').innerHTML = shown.map((n, i) => {
+    $('list').innerHTML = shown.map((n) => {
+      const hasPw = n.status === 'ok';
       const visible = allShown || revealed.has(n.name);
-      const hasPw = !!n.password;
-      const pwText = !hasPw ? 'No password (open network)' : visible ? esc(n.password) : '••••••••••';
+      let body;
+      if (hasPw) {
+        body = `<div class="pw">${visible ? esc(n.password) : '••••••••••'}</div>`;
+      } else {
+        const note = NOTES[n.status];
+        body = `<div class="note ${note.warn ? 'warn' : ''}">${note.text}</div>`;
+      }
       return `
         <div class="item">
           <div class="info">
             <div class="name">${esc(n.name)}</div>
             <div class="meta">${esc(n.security || 'Unknown security')}</div>
-            <div class="pw ${hasPw ? '' : 'none'}">${pwText}</div>
+            ${body}
           </div>
           ${hasPw ? `<div class="actions">
             <button data-act="toggle" data-name="${esc(n.name)}">${visible ? 'Hide' : 'Show'}</button>
@@ -124,7 +145,9 @@
 
   async function load() {
     $('list').innerHTML = '<div class="empty">Loading...</div>';
-    networks = (await window.api.getNetworks()).sort((a, b) => a.name.localeCompare(b.name));
+    const result = await window.api.getNetworks();
+    networks = result.networks;
+    $('banner').style.display = result.admin ? 'none' : 'block';
     render();
   }
 
